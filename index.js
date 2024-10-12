@@ -2,15 +2,28 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const cookieParser = require("cookie-parser");
 const userRoutes = require("./routes/userRoutes");
 const linkRoutes = require("./routes/linkRoutes");
+const platformRoutes = require("./routes/platformRoutes");
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174, https://devlinks24.vercel.app",
+      "https://devlinks24.web.app",
+      "https://devlinks24.firebaseapp.com",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 mongoose
   .connect(process.env.MONGO_URI, {
@@ -23,6 +36,7 @@ mongoose
 // Use routes
 app.use("/api/users", userRoutes);
 app.use("/api/links", linkRoutes);
+app.use("/api/platforms", platformRoutes);
 
 app.get("/", (req, res) => {
   res.send(

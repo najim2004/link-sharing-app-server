@@ -27,6 +27,7 @@ const UserSchema = new mongoose.Schema(
       unique: true,
       validate: [urlValidator, "Invalid URL format for profile picture"],
     },
+    bio: { type: String, maxlength: 100 },
   },
   { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } }
 );
