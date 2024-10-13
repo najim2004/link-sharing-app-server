@@ -86,10 +86,19 @@ exports.updateUser = async (req, res) => {
       user[key] = updates[key];
     });
 
-    await user.save();
-    res
-      .status(200)
-      .send({ success: true, message: "User updated successfully", user });
+    const updatedUser = await user.save();
+
+    if (!updatedUser) {
+      return res
+        .status(200)
+        .send({ success: false, message: "Failed to update user" });
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
     res.send({ success: false, message: error.message });
   }
@@ -103,14 +112,12 @@ exports.getUser = async (req, res) => {
       "-password -createdAt -updatedAt -__v"
     );
     if (!user) {
-      return res
-        .status(404)
-        .send({ success: false, message: "User not found" });
+      return res.send({ success: false, message: "User not found" });
     }
 
     res.status(200).send({ success: true, user });
   } catch (error) {
-    res.status(400).send({ success: false, message: error.message });
+    res.send({ success: false, message: error.message });
   }
 };
 exports.getUserByPublic = async (req, res) => {

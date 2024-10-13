@@ -69,73 +69,97 @@ exports.getLinks = async (req, res) => {
   }
 };
 
+// usrl chekcker
+function isValidLink(text) {
+  const urlPattern = new RegExp(
+    "^(https?:\\/\\/)" + // Protocol (http or https)
+      "((([a-zA-Z\\d]([a-zA-Z\\d-]*[a-zA-Z\\d])*)\\.)+[a-zA-Z]{2,}|" + // Domain name
+      "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR IPv4 address
+      "(\\:\\d+)?(\\/[-a-zA-Z\\d%_.~+]*)*" + // Port and path
+      "(\\?[;&a-zA-Z\\d%_.~+=-]*)?" + // Query string
+      "(\\#[-a-zA-Z\\d_]*)?$", // Fragment locator
+    "i"
+  );
+
+  return urlPattern.test(text);
+}
+
 exports.updateLink = async (req, res) => {
-  const _id = req?.user?.id;
-  const { url, order, platform } = req.body;
-  const query = {};
-
-  if (url) {
-    if (typeof url !== "string" || !url.trim()) {
-      return res.send({
-        success: false,
-        message: "Invalid URL provided",
-      });
-    }
-    query.url = url.trim();
-  }
-
-  if (order !== undefined) {
-    if (typeof order !== "number") {
-      return res.send({
-        success: false,
-        message: "Invalid order provided; it must be a number",
-      });
-    }
-    query.order = order;
-  }
-
-  if (platform) {
-    if (typeof platform !== "string" || !platform.trim()) {
-      return res.send({
-        success: false,
-        message: "Invalid platform provided",
-      });
-    }
-    query.platform = platform.trim();
-  }
-
-  if (Object.keys(query).length === 0) {
-    return res.send({
-      success: false,
-      message: "No update provided",
-    });
-  }
-
-  if (!mongoose.Types.ObjectId.isValid(_id)) {
-    return res.send({
-      success: false,
-      message: "Invalid ID provided",
-    });
-  }
+  const userId = req?.user?.id;
+  const updatedDataArray = req.body;
+  let updateFailedIds = [];
 
   try {
-    const updatedLink = await Link.findByIdAndUpdate(_id, query, { new: true });
-    if (!updatedLink) {
+    // Process each link update
+    const updateResults = await Promise.all(
+      updatedDataArray.map(async (obj) => {
+        if (!isValidLink(obj.url)) {
+          return { success: false, message: "Invalid URL" };
+        }
+
+        const { _id } = obj;
+        const link = await Link.findById(_id);
+
+        // Check if link exists
+        if (!link) {
+          updateFailedIds.push(_id);
+          return { success: false, message: `Link not found for "${_id}"` };
+        }
+
+        // Check if the link belongs to the current user
+        if (link.userId.toString() !== userId) {
+          updateFailedIds.push(_id);
+          return {
+            success: false,
+            message: `You are not authorized to update the link with ID "${_id}"`,
+          };
+        }
+
+        // Update only the changed properties
+        Object.keys(obj).forEach((key) => {
+          if (link[key] !== obj[key]) {
+            link[key] = obj[key];
+          }
+        });
+
+        // Save the updated link
+        const updatedLink = await link.save();
+
+        // Check if the update was successful
+        if (!updatedLink) {
+          updateFailedIds.push(link._id);
+          return {
+            success: false,
+            message: `Failed to update link with ID "${_id}"`,
+          };
+        }
+
+        return {
+          success: true,
+          message: `Link with ID "${_id}" updated successfully`,
+        };
+      })
+    );
+
+    // Check if any updates failed
+    if (updateFailedIds.length > 0) {
       return res.send({
         success: false,
-        message: "Link not found",
+        message: "Some updates failed",
+        failedIds: updateFailedIds,
       });
     }
-    res.status(200).send({
+
+    // All updates were successful
+    res.send({
       success: true,
-      message: "Link updated successfully",
-      link: updatedLink,
+      message: "All links updated successfully",
     });
   } catch (error) {
+    console.error("Error updating links:", error);
     res.send({
       success: false,
-      message: "Internal Server Error",
-      error: error.message,
+      message: "An error occurred while updating the links",
     });
   }
 };
