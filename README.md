@@ -2,6 +2,10 @@
 
 This repository contains the backend code for **DevLinks24**, a link-sharing platform that allows users to manage and share their links efficiently. Built using Node.js, Express.js, and MongoDB, the backend provides a secure and maintainable API for user authentication, link management, and profile updates.
 
+## 🚀 Related Repository
+
+- **Frontend Repository**: [DevLinks24 Frontend](https://github.com/najim2004/link-sharing-app-client)
+
 ## 🛠️ Technologies Used
 
 - **Node.js**: JavaScript runtime for the server
